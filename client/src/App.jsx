@@ -1,0 +1,26 @@
+import { Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Dashboard from './pages/Dashboard';
+import CustomerList from './pages/CustomerList';
+import CustomerDetail from './pages/CustomerDetail';
+import AddEntry from './pages/AddEntry';
+import AddPayment from './pages/AddPayment';
+import PrintLedger from './pages/PrintLedger';
+
+export default function App() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/customers" element={<CustomerList />} />
+          <Route path="/customers/:id" element={<CustomerDetail />} />
+          <Route path="/entries/new" element={<AddEntry />} />
+          <Route path="/payments/new" element={<AddPayment />} />
+          <Route path="/customers/:id/print" element={<PrintLedger />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
