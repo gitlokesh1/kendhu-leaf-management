@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SummaryCard from '../components/SummaryCard';
+import { authFetch } from '../utils/auth';
 
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
@@ -10,7 +11,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/dashboard')
+    authFetch('/api/dashboard')
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch((err) => { setError(err.message); setLoading(false); });

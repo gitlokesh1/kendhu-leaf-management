@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CustomerForm from '../components/CustomerForm';
+import { authFetch } from '../utils/auth';
 
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
@@ -13,7 +14,7 @@ export default function CustomerList() {
 
   const fetchCustomers = () => {
     setLoading(true);
-    fetch('/api/customers')
+    authFetch('/api/customers')
       .then((r) => r.json())
       .then((d) => { setCustomers(d); setLoading(false); })
       .catch((err) => { setError(err.message); setLoading(false); });
