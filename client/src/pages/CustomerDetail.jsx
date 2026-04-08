@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import SummaryCard from '../components/SummaryCard';
+import { authFetch } from '../utils/auth';
 
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 const fmtDate = (d) => {
@@ -17,7 +18,7 @@ export default function CustomerDetail() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`/api/customers/${id}`)
+    authFetch(`/api/customers/${id}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) throw new Error(d.error);

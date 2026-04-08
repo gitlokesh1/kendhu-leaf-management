@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { logout } from '../utils/auth';
 
 export default function Navbar() {
   const location = useLocation();
@@ -19,7 +20,7 @@ export default function Navbar() {
             <span className="hidden sm:block">Kendhu Leaf Management</span>
             <span className="sm:hidden">KLM</span>
           </Link>
-          <div className="flex gap-1 sm:gap-2">
+          <div className="flex gap-1 sm:gap-2 items-center">
             {links.map((link) => (
               <Link
                 key={link.to}
@@ -33,6 +34,13 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <button
+              onClick={logout}
+              aria-label="Logout"
+              className="px-2 sm:px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-600 transition-colors ml-1"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>

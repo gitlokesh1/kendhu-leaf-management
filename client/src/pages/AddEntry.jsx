@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { authFetch } from '../utils/auth';
 
 const today = () => new Date().toISOString().split('T')[0];
 
@@ -21,7 +22,7 @@ export default function AddEntry() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    fetch('/api/customers')
+    authFetch('/api/customers')
       .then((r) => r.json())
       .then(setCustomers)
       .catch(console.error);
@@ -40,7 +41,7 @@ export default function AddEntry() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/entries', {
+      const res = await authFetch('/api/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

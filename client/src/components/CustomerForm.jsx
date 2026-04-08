@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { authFetch } from '../utils/auth';
 
 export default function CustomerForm({ onSuccess, onCancel }) {
   const [form, setForm] = useState({ name: '', mobile: '', address: '' });
@@ -14,7 +15,7 @@ export default function CustomerForm({ onSuccess, onCancel }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/customers', {
+      const res = await authFetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
