@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Leaf } from 'lucide-react';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -36,7 +37,11 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-primary-700 to-primary-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🌿</div>
+          <div className="flex justify-center mb-3">
+            <div className="bg-primary-100 p-4 rounded-full">
+              <Leaf className="h-10 w-10 text-primary-700" />
+            </div>
+          </div>
           <h1 className="text-xl font-bold text-primary-800 leading-tight">
             KENDHU LEAF<br />MANAGEMENT
           </h1>
