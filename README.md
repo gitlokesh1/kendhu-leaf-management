@@ -45,7 +45,7 @@ A full-stack digital ledger / register for tracking Kendhu (Tendu) leaf procurem
 
 - **Frontend**: React 18 + Vite + Tailwind CSS + React Router v6
 - **Backend**: Node.js + Express.js
-- **Database**: SQLite via built-in `node:sqlite` module (Node.js v22+) — no external DB needed, file created automatically
+- **Database**: [Supabase](https://supabase.com) (hosted PostgreSQL) via `@supabase/supabase-js`
 - **Language**: JavaScript
 
 ## Project Structure
@@ -81,6 +81,54 @@ kendhu-leaf-management/
 
 ## Setup & Running
 
+### 1. Create Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create a free project.
+2. In the **SQL Editor**, run the following to create the tables:
+
+```sql
+CREATE TABLE customers (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  mobile TEXT,
+  address TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE leaf_entries (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  date DATE NOT NULL,
+  satta_count INTEGER DEFAULT 0,
+  bidda_count INTEGER DEFAULT 0,
+  total_bidda INTEGER NOT NULL,
+  rate_per_bidda NUMERIC DEFAULT 5,
+  total_amount NUMERIC NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE payments (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  amount_paid NUMERIC NOT NULL,
+  payment_date DATE NOT NULL,
+  payment_mode TEXT DEFAULT 'Cash',
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+3. From **Project Settings → API**, copy your **Project URL** and **anon public** key.
+
+### 2. Configure Environment Variables
+
+```bash
+cp .env.example .env
+# Edit .env and fill in your SUPABASE_URL and SUPABASE_ANON_KEY
+```
+
+### 3. Install & Run
+
 ```bash
 # Clone the repo
 git clone https://github.com/gitlokesh1/kendhu-leaf-management.git
@@ -107,11 +155,17 @@ npm run server   # Start Express server only
 npm run client   # Start Vite dev server only
 ```
 
-### Production Build
+### Production Build (EC2 / any server)
 
 ```bash
-cd client && npm run build
+# Build React frontend
+cd client && npm run build && cd ..
+
+# Start server (serves API + static frontend)
+node server/index.js
 ```
+
+> The server listens on `0.0.0.0` so it is accessible externally on EC2.
 
 ## API Endpoints
 
@@ -128,33 +182,35 @@ cd client && npm run build
 
 ## Database Schema
 
+Tables are created in **Supabase** (PostgreSQL). See the SQL above.
+
 ### customers
 | Column | Type | Description |
 |--------|------|-------------|
-| id | INTEGER PK | Auto-increment |
+| id | SERIAL PK | Auto-increment |
 | name | TEXT | Customer name (required) |
 | mobile | TEXT | Mobile number |
 | address | TEXT | Address |
-| created_at | DATETIME | Auto timestamp |
+| created_at | TIMESTAMPTZ | Auto timestamp |
 
 ### leaf_entries
 | Column | Type | Description |
 |--------|------|-------------|
-| id | INTEGER PK | Auto-increment |
+| id | SERIAL PK | Auto-increment |
 | customer_id | INTEGER FK | Links to customers |
-| date | TEXT | Entry date |
+| date | DATE | Entry date |
 | satta_count | INTEGER | Number of satta |
 | bidda_count | INTEGER | Extra bidda (< 100) |
 | total_bidda | INTEGER | (satta × 100) + bidda |
-| rate_per_bidda | REAL | Default ₹5 |
-| total_amount | REAL | total_bidda × rate |
+| rate_per_bidda | NUMERIC | Default ₹5 |
+| total_amount | NUMERIC | total_bidda × rate |
 
 ### payments
 | Column | Type | Description |
 |--------|------|-------------|
-| id | INTEGER PK | Auto-increment |
+| id | SERIAL PK | Auto-increment |
 | customer_id | INTEGER FK | Links to customers |
-| amount_paid | REAL | Payment amount |
-| payment_date | TEXT | Date of payment |
+| amount_paid | NUMERIC | Payment amount |
+| payment_date | DATE | Date of payment |
 | payment_mode | TEXT | Cash / UPI / Bank |
 | note | TEXT | Optional note |

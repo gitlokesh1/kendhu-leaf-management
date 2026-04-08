@@ -1,33 +1,49 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const supabase = require('../db');
 
 // GET dashboard summary
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    const todayEntries = db.prepare(`
-      SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total
-      FROM leaf_entries WHERE date = ?
-    `).get(today);
+    const { data: todayEntriesData } = await supabase
+      .from('leaf_entries')
+      .select('total_amount')
+      .eq('date', today);
 
-    const todayPayments = db.prepare(`
-      SELECT COALESCE(SUM(amount_paid), 0) as total
-      FROM payments WHERE payment_date = ?
-    `).get(today);
+    const { data: todayPaymentsData } = await supabase
+      .from('payments')
+      .select('amount_paid')
+      .eq('payment_date', today);
 
-    const overallBalance = db.prepare(`
-      SELECT 
-        COALESCE((SELECT SUM(total_amount) FROM leaf_entries), 0) -
-        COALESCE((SELECT SUM(amount_paid) FROM payments), 0) as pending_balance
-    `).get();
+    const { data: allEntries } = await supabase
+      .from('leaf_entries')
+      .select('total_amount');
+
+    const { data: allPayments } = await supabase
+      .from('payments')
+      .select('amount_paid');
+
+    const today_entries_count = todayEntriesData ? todayEntriesData.length : 0;
+    const today_total_amount = todayEntriesData
+      ? todayEntriesData.reduce((sum, e) => sum + Number(e.total_amount), 0)
+      : 0;
+    const today_total_payments = todayPaymentsData
+      ? todayPaymentsData.reduce((sum, p) => sum + Number(p.amount_paid), 0)
+      : 0;
+    const total_amount_all = allEntries
+      ? allEntries.reduce((sum, e) => sum + Number(e.total_amount), 0)
+      : 0;
+    const total_paid_all = allPayments
+      ? allPayments.reduce((sum, p) => sum + Number(p.amount_paid), 0)
+      : 0;
 
     res.json({
-      today_entries_count: todayEntries.count,
-      today_total_amount: todayEntries.total,
-      today_total_payments: todayPayments.total,
-      overall_pending_balance: overallBalance.pending_balance
+      today_entries_count,
+      today_total_amount,
+      today_total_payments,
+      overall_pending_balance: total_amount_all - total_paid_all
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

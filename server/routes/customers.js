@@ -1,69 +1,91 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const supabase = require('../db');
 
 // GET all customers with balance summary
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const customers = db.prepare(`
-      SELECT 
-        c.*,
-        COALESCE(SUM(le.total_amount), 0) as total_amount,
-        COALESCE((SELECT SUM(p.amount_paid) FROM payments p WHERE p.customer_id = c.id), 0) as total_paid,
-        COALESCE(SUM(le.total_amount), 0) - COALESCE((SELECT SUM(p.amount_paid) FROM payments p WHERE p.customer_id = c.id), 0) as balance
-      FROM customers c
-      LEFT JOIN leaf_entries le ON le.customer_id = c.id
-      GROUP BY c.id
-      ORDER BY c.name ASC
-    `).all();
-    res.json(customers);
+    const { data: customers, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+
+    // Fetch all entries and payments in bulk to avoid N+1 queries
+    const { data: allEntries } = await supabase
+      .from('leaf_entries')
+      .select('customer_id, total_amount');
+
+    const { data: allPayments } = await supabase
+      .from('payments')
+      .select('customer_id, amount_paid');
+
+    const customersWithBalance = customers.map((c) => {
+      const entries = allEntries ? allEntries.filter((e) => e.customer_id === c.id) : [];
+      const payments = allPayments ? allPayments.filter((p) => p.customer_id === c.id) : [];
+      const total_amount = entries.reduce((sum, e) => sum + Number(e.total_amount), 0);
+      const total_paid = payments.reduce((sum, p) => sum + Number(p.amount_paid), 0);
+      return { ...c, total_amount, total_paid, balance: total_amount - total_paid };
+    });
+
+    res.json(customersWithBalance);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // GET single customer with full details
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
-    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+    const { data: customer, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
 
-    const entries = db.prepare(`
-      SELECT * FROM leaf_entries WHERE customer_id = ? ORDER BY date DESC, created_at DESC
-    `).all(req.params.id);
+    if (error || !customer) return res.status(404).json({ error: 'Customer not found' });
 
-    const payments = db.prepare(`
-      SELECT * FROM payments WHERE customer_id = ? ORDER BY payment_date DESC, created_at DESC
-    `).all(req.params.id);
+    const { data: entries } = await supabase
+      .from('leaf_entries')
+      .select('*')
+      .eq('customer_id', req.params.id)
+      .order('date', { ascending: false });
 
-    const summary = db.prepare(`
-      SELECT
-        COALESCE(SUM(le.total_amount), 0) as total_amount,
-        COALESCE((SELECT SUM(p.amount_paid) FROM payments p WHERE p.customer_id = ?), 0) as total_paid
-      FROM leaf_entries le
-      WHERE le.customer_id = ?
-    `).get(req.params.id, req.params.id);
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('customer_id', req.params.id)
+      .order('payment_date', { ascending: false });
 
-    summary.balance = summary.total_amount - summary.total_paid;
+    const total_amount = entries ? entries.reduce((sum, e) => sum + Number(e.total_amount), 0) : 0;
+    const total_paid = payments ? payments.reduce((sum, p) => sum + Number(p.amount_paid), 0) : 0;
 
-    res.json({ customer, entries, payments, summary });
+    res.json({
+      customer,
+      entries: entries || [],
+      payments: payments || [],
+      summary: { total_amount, total_paid, balance: total_amount - total_paid }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // POST create new customer
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, mobile, address } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
 
-    const result = db.prepare(
-      'INSERT INTO customers (name, mobile, address) VALUES (?, ?, ?)'
-    ).run(name, mobile || null, address || null);
+    const { data, error } = await supabase
+      .from('customers')
+      .insert({ name, mobile: mobile || null, address: address || null })
+      .select()
+      .single();
 
-    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(customer);
+    if (error) throw error;
+    res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
