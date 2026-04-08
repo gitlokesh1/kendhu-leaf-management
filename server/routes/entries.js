@@ -1,23 +1,31 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const supabase = require('../db');
 
 // GET all entries, optionally filter by date
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { date } = req.query;
-    let query = `
-      SELECT le.*, c.name as customer_name
-      FROM leaf_entries le
-      JOIN customers c ON c.id = le.customer_id
-    `;
-    const params = [];
+
+    let query = supabase
+      .from('leaf_entries')
+      .select('*, customers(name)')
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
     if (date) {
-      query += ' WHERE le.date = ?';
-      params.push(date);
+      query = query.eq('date', date);
     }
-    query += ' ORDER BY le.date DESC, le.created_at DESC';
-    const entries = db.prepare(query).all(...params);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const entries = (data || []).map((e) => ({
+      ...e,
+      customer_name: e.customers ? e.customers.name : null,
+      customers: undefined
+    }));
+
     res.json(entries);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -25,7 +33,7 @@ router.get('/', (req, res) => {
 });
 
 // POST create new entry
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { customer_id, date, satta_count, bidda_count, rate_per_bidda } = req.body;
     if (!customer_id || !date) {
@@ -38,13 +46,14 @@ router.post('/', (req, res) => {
     const total_bidda = (satta * 100) + bidda;
     const total_amount = total_bidda * rate;
 
-    const result = db.prepare(`
-      INSERT INTO leaf_entries (customer_id, date, satta_count, bidda_count, total_bidda, rate_per_bidda, total_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(customer_id, date, satta, bidda, total_bidda, rate, total_amount);
+    const { data, error } = await supabase
+      .from('leaf_entries')
+      .insert({ customer_id, date, satta_count: satta, bidda_count: bidda, total_bidda, rate_per_bidda: rate, total_amount })
+      .select()
+      .single();
 
-    const entry = db.prepare('SELECT * FROM leaf_entries WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(entry);
+    if (error) throw error;
+    res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
