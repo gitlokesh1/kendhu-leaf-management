@@ -34,7 +34,14 @@ router.post('/login', loginLimiter, (req, res) => {
   }
 });
 
-router.get('/verify', (req, res) => {
+const verifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.get('/verify', verifyLimiter, (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ valid: false });
