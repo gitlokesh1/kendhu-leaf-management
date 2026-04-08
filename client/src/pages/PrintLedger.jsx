@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { authFetch } from '../utils/auth';
+import { Printer, ArrowLeft } from 'lucide-react';
 
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 const fmtDate = (d) => {
@@ -15,7 +17,7 @@ export default function PrintLedger() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`/api/customers/${id}`)
+    authFetch(`/api/customers/${id}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) throw new Error(d.error);
@@ -37,18 +39,20 @@ export default function PrintLedger() {
       <div className="no-print mb-4 flex gap-3">
         <button
           onClick={() => window.print()}
-          className="btn-primary"
+          className="btn-primary flex items-center gap-2"
         >
-          🖨 Print / Save PDF
+          <Printer className="h-4 w-4" />
+          Print / Save PDF
         </button>
-        <Link to={`/customers/${id}`} className="btn-secondary">
-          ← Back to Detail
+        <Link to={`/customers/${id}`} className="btn-secondary flex items-center gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Detail
         </Link>
       </div>
 
       <div className="border-2 border-gray-800 rounded-lg overflow-hidden">
         <div className="bg-primary-700 text-white p-6 text-center">
-          <h1 className="text-2xl font-bold">🌿 Kendhu Leaf Management</h1>
+          <h1 className="text-2xl font-bold">Kendhu Leaf Management</h1>
           <p className="text-primary-200 mt-1">Customer Ledger Report</p>
           <p className="text-primary-300 text-sm mt-1">Printed on: {printDate}</p>
         </div>
@@ -57,8 +61,8 @@ export default function PrintLedger() {
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Customer</p>
             <p className="text-xl font-bold text-gray-900">{customer.name}</p>
-            {customer.mobile && <p className="text-gray-600 text-sm">📞 {customer.mobile}</p>}
-            {customer.address && <p className="text-gray-600 text-sm">📍 {customer.address}</p>}
+            {customer.mobile && <p className="text-gray-600 text-sm">Tel: {customer.mobile}</p>}
+            {customer.address && <p className="text-gray-600 text-sm">Address: {customer.address}</p>}
           </div>
           <div className="grid grid-cols-3 gap-3 sm:text-right">
             <div className="bg-blue-50 rounded-lg p-3">

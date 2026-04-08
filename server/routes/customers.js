@@ -91,4 +91,24 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT update customer
+router.put('/:id', async (req, res) => {
+  try {
+    const { name, mobile, address } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+
+    const { data, error } = await supabase
+      .from('customers')
+      .update({ name, mobile: mobile || null, address: address || null })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
