@@ -1,6 +1,6 @@
-# 🌿 Kendhu Leaf Management System
+# Kendhu Leaf Management System
 
-A full-stack digital ledger / register for tracking Kendhu (Tendu) leaf procurement from sellers, managing payments, and generating printable receipts.
+A full-stack digital ledger for tracking Kendhu (Tendu) leaf procurement from sellers, managing payments, and generating printable receipts.
 
 ## Screenshots
 
@@ -21,12 +21,13 @@ A full-stack digital ledger / register for tracking Kendhu (Tendu) leaf procurem
 
 ## Features
 
-- **Dashboard**: Today's entries count, total amount, payments received, and overall pending balance
-- **Customer Management**: Add customers, view balance summary, search by name/mobile
+- **Dashboard**: Today's entries count, total amount, payments received, overall pending balance, weekly/monthly amounts, total customers, and top 5 pending customers
+- **Customer Management**: Add/edit customers, view balance summary, search by name/mobile
 - **Unlimited Entries Per Customer**: Each customer can have unlimited leaf entries across unlimited days — all linked by `customer_id` and shown in one place
-- **Leaf Entry Recording**: Record satta/bidda counts with auto-calculation of total amount
+- **Leaf Entry Recording**: Record satta/bidda counts with auto-calculation of total amount; each entry gets a unique Transaction ID (e.g. `KL-E-20260408-001`)
 - **Live Preview**: While adding an entry, instantly see Total Bidda and Total Amount update in real time
-- **Payment Recording**: Record payments with Cash/UPI/Bank modes; shows customer's current balance before saving
+- **Payment Recording**: Record payments with Cash/UPI/Bank modes; shows customer's current balance before saving; each payment gets a unique Transaction ID (e.g. `KL-P-20260408-001`)
+- **Edit & Delete Transactions**: Edit or delete leaf entries and payments via pencil/trash icons in the customer ledger
 - **Customer Ledger**: Full per-customer ledger — all entries and payments on one page, sorted by date
 - **Running Balance**: For each customer, always shows Total Amount, Total Paid, and Balance Due
 - **Print Ledger**: Printable PDF-ready ledger for each customer via `window.print()`
@@ -46,7 +47,6 @@ A full-stack digital ledger / register for tracking Kendhu (Tendu) leaf procurem
 - **Frontend**: React 18 + Vite + Tailwind CSS + React Router v6
 - **Backend**: Node.js + Express.js
 - **Database**: [Supabase](https://supabase.com) (hosted PostgreSQL) via `@supabase/supabase-js`
-- **Language**: JavaScript
 
 ## Project Structure
 
@@ -55,7 +55,7 @@ kendhu-leaf-management/
 ├── package.json          # Root: server deps + dev scripts
 ├── server/
 │   ├── index.js          # Express server (port 5000)
-│   ├── db.js             # SQLite setup & schema initialization
+│   ├── db.js             # Supabase client setup
 │   └── routes/
 │       ├── customers.js
 │       ├── entries.js
@@ -104,6 +104,7 @@ CREATE TABLE leaf_entries (
   total_bidda INTEGER NOT NULL,
   rate_per_bidda NUMERIC DEFAULT 5,
   total_amount NUMERIC NOT NULL,
+  transaction_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -114,11 +115,18 @@ CREATE TABLE payments (
   payment_date DATE NOT NULL,
   payment_mode TEXT DEFAULT 'Cash',
   note TEXT,
+  transaction_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
 3. From **Project Settings → API**, copy your **Project URL** and **anon public** key.
+
+> **Existing database migration:** If you already have the tables created without the `transaction_id` column, run this in the SQL Editor:
+> ```sql
+> ALTER TABLE leaf_entries ADD COLUMN IF NOT EXISTS transaction_id TEXT;
+> ALTER TABLE payments ADD COLUMN IF NOT EXISTS transaction_id TEXT;
+> ```
 
 ### 2. Configure Environment Variables
 
@@ -171,14 +179,19 @@ node server/index.js
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /api/dashboard | Today's stats + overall pending balance |
+| GET | /api/dashboard | Today's stats, weekly/monthly amounts, total customers, top pending |
 | GET | /api/customers | All customers with balance summary |
 | POST | /api/customers | Create new customer |
+| PUT | /api/customers/:id | Update customer details |
 | GET | /api/customers/:id | Customer detail + all entries & payments |
 | GET | /api/entries | All leaf entries (with customer name) |
-| POST | /api/entries | Create leaf entry (auto-calculates totals) |
+| POST | /api/entries | Create leaf entry (auto-calculates totals, assigns transaction ID) |
+| PUT | /api/entries/:id | Update leaf entry |
+| DELETE | /api/entries/:id | Delete leaf entry |
 | GET | /api/payments | All payments |
-| POST | /api/payments | Record a payment |
+| POST | /api/payments | Record a payment (assigns transaction ID) |
+| PUT | /api/payments/:id | Update payment |
+| DELETE | /api/payments/:id | Delete payment |
 
 ## Database Schema
 
@@ -204,6 +217,7 @@ Tables are created in **Supabase** (PostgreSQL). See the SQL above.
 | total_bidda | INTEGER | (satta × 100) + bidda |
 | rate_per_bidda | NUMERIC | Default ₹5 |
 | total_amount | NUMERIC | total_bidda × rate |
+| transaction_id | TEXT | Unique ID e.g. KL-E-20260408-001 |
 
 ### payments
 | Column | Type | Description |
@@ -214,3 +228,4 @@ Tables are created in **Supabase** (PostgreSQL). See the SQL above.
 | payment_date | DATE | Date of payment |
 | payment_mode | TEXT | Cash / UPI / Bank |
 | note | TEXT | Optional note |
+| transaction_id | TEXT | Unique ID e.g. KL-P-20260408-001 |
