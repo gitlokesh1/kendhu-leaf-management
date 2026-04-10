@@ -1,0 +1,18 @@
+{
+  "name": "Kendhu Leaf Management",
+  "short_name": "KLM",
+  "description": "Kendhu leaf delivery and payment management system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0fdf4",
+  "theme_color": "#15803d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
